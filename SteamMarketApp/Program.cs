@@ -1,3 +1,8 @@
+using SteamMarketApp.Auth;
+using SteamMarketApp.Properties;
+using System;
+using System.Windows.Forms;
+
 namespace SteamMarketApp
 {
     internal static class Program
@@ -8,10 +13,15 @@ namespace SteamMarketApp
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+            if (Settings.Default.IsRemembered)
+                Application.Run(
+                    new SteamMarketForm(
+                        new SteamAccount(
+                            Settings.Default.SteamLoginSecure
+                            )));
+            else
+                Application.Run(new SteamLoginForm());
         }
     }
 }
