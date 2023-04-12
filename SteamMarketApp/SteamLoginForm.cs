@@ -21,7 +21,7 @@ namespace SteamMarketApp
 
         private async void Submit(object sender, EventArgs e)
         {
-
+            btnSubmit.Enabled = false;
             var result = await SteamSession.CreateAsync(txtAccountName.Text, txtPassword.Text);
 
             if (result.IsSuccess)
@@ -31,6 +31,7 @@ namespace SteamMarketApp
                     Settings.Default.AccountName = txtAccountName.Text;
                     Settings.Default.Password = txtPassword.Text;
                     Settings.Default.SteamLoginSecure = result.Session.Account.SteamLoginSecure;
+                    Settings.Default.IsRemembered = true;
                     Settings.Default.Save();
                 }
                 else
@@ -43,6 +44,7 @@ namespace SteamMarketApp
                 SteamMarketForm steamMarketForm = new SteamMarketForm(this, result.Session.Account);
                 steamMarketForm.Show();
             }
+            btnSubmit.Enabled = true;
         }
     }
 }
