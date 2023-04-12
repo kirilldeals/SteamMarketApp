@@ -1,10 +1,8 @@
-﻿using OpenQA.Selenium;
-using PuppeteerSharp;
+﻿using PuppeteerSharp;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.ComponentModel.Design.ObjectSelectorEditor;
 
 namespace SteamMarketApp.Auth
 {
@@ -12,8 +10,11 @@ namespace SteamMarketApp.Auth
     {
         const string SelectorCredentialsInput = ".newlogindialog_TextInput_2eKVn";
         const string SelectorSubmitCredentials = ".newlogindialog_SubmitButton_2QgFE";
-        const string SelectorCodeInput = ".newlogindialog_SegmentedCharacterInput_1kJ6q";
         const string SelectorError = ".newlogindialog_Danger_1-HwJ";
+        const string SelectorMobileAuth = ".newlogindialog_AwaitingMobileConfText_7LmnT";
+        const string SelectorMobileAuthFailure = ".newlogindialog_FailureTitle_A3Y-u";
+        const string SelectorCodeInputLink = ".newlogindialog_TextLink_1cnUQ";
+        const string SelectorCodeInput = ".newlogindialog_SegmentedCharacterInput_1kJ6q";
         const string SelectorAccountAuthorized = "#account_pulldown";
 
         public SteamAccount Account { get; private set; }
@@ -29,7 +30,7 @@ namespace SteamMarketApp.Auth
             return (isSuccess, session);
         }
 
-        public async Task<bool> Initialize(string accountName, string password)
+        private async Task<bool> Initialize(string accountName, string password)
         {
             try
             {
@@ -47,7 +48,7 @@ namespace SteamMarketApp.Auth
                 await page.TypeAsync($"input{SelectorCredentialsInput}[type=\"password\"]", password);
                 await page.ClickAsync(SelectorSubmitCredentials);
 
-                await page.WaitForSelectorAsync($"{SelectorError}, {SelectorCodeInput}");
+                await page.WaitForSelectorAsync($"{SelectorError}, {SelectorMobileAuth}, {SelectorCodeInput}");
                 if (await page.QuerySelectorAsync(SelectorError) != null)
                 {
                     // Wrong login or password
@@ -55,7 +56,11 @@ namespace SteamMarketApp.Auth
                     MessageBox.Show("Invalid account name or password");
                     return false;
                 }
-                else if (await page.QuerySelectorAsync(SelectorCodeInput) != null)
+                else if (await page.QuerySelectorAsync(SelectorMobileAuth) != null)
+                {
+                    await page.ClickAsync(SelectorCodeInputLink);
+                }
+                if (await page.QuerySelectorAsync(SelectorCodeInput) != null)
                 {
                     // Two-Factor Authentication is required
                     await page.WaitForSelectorAsync(SelectorCodeInput);
@@ -92,7 +97,8 @@ namespace SteamMarketApp.Auth
 
                 await page.WaitForSelectorAsync(SelectorAccountAuthorized);
                 var cookies = await page.GetCookiesAsync();
-                Account = new SteamAccount(cookies.FirstOrDefault(c => c.Name == "steamLoginSecure").Value);
+                var cookie = cookies.FirstOrDefault(c => c.Name == "steamLoginSecure");
+                Account = new SteamAccount(cookie.Value);
                 await browser.CloseAsync();
                 return true;
             }

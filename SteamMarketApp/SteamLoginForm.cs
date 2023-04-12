@@ -19,10 +19,10 @@ namespace SteamMarketApp
             chkRememberMe.Checked = Settings.Default.IsRemembered;
         }
 
-        private void Submit(object sender, EventArgs e)
+        private async void Submit(object sender, EventArgs e)
         {
 
-            var result = Task.Run(() => SteamSession.CreateAsync(txtAccountName.Text, txtPassword.Text)).Result;
+            var result = await SteamSession.CreateAsync(txtAccountName.Text, txtPassword.Text);
 
             if (result.IsSuccess)
             {
@@ -31,7 +31,6 @@ namespace SteamMarketApp
                     Settings.Default.AccountName = txtAccountName.Text;
                     Settings.Default.Password = txtPassword.Text;
                     Settings.Default.SteamLoginSecure = result.Session.Account.SteamLoginSecure;
-                    Settings.Default.IsRemembered = true;
                     Settings.Default.Save();
                 }
                 else
@@ -41,9 +40,8 @@ namespace SteamMarketApp
                     Settings.Default.Save();
                 }
                 this.Hide();
-                SteamMarketForm steamMarketForm = new SteamMarketForm(result.Session.Account);
-                steamMarketForm.ShowDialog();
-                Application.Exit();
+                SteamMarketForm steamMarketForm = new SteamMarketForm(this, result.Session.Account);
+                steamMarketForm.Show();
             }
         }
     }
