@@ -6,7 +6,7 @@ using System.Windows.Forms;
 
 namespace SteamMarketApp.Auth
 {
-    public class SteamSession
+    public static class SteamSession
     {
         const string SelectorCredentialsInput = ".newlogindialog_TextInput_2eKVn";
         const string SelectorSubmitCredentials = ".newlogindialog_SubmitButton_2QgFE";
@@ -14,35 +14,24 @@ namespace SteamMarketApp.Auth
         const string SelectorMobileAuth = ".newlogindialog_AwaitingMobileConfText_7LmnT";
         const string SelectorMobileAuthFailure = ".newlogindialog_FailureTitle_A3Y-u";
         const string SelectorCodeInputLink = ".newlogindialog_TextLink_1cnUQ";
-        const string SelectorCodeInput = ".newlogindialog_SegmentedCharacterInput_1kJ6q";
+        const string SelectorCodeInput = ".segmentedinputs_SegmentedCharacterInput_3PDBF";
         const string SelectorAccountAuthorized = "#account_pulldown";
 
-        public SteamAccount Account { get; private set; }
-
-        private SteamSession()
+        public static async Task<SteamAccount> AuthorizeAsync(string accountName, string password, bool headlessMode = true)
         {
-        }
-
-        public static async Task<(bool IsSuccess, SteamSession Session)> CreateAsync(string accountName, string password)
-        {
-            var session = new SteamSession();
-            var isSuccess = await session.Initialize(accountName, password);
-            return (isSuccess, session);
-        }
-
-        private async Task<bool> Initialize(string accountName, string password)
-        {
-            try
+            await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
+            var options = new LaunchOptions
             {
-                await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
-                var options = new LaunchOptions
-                {
-                    Headless = true
-                };
-                IBrowser browser = await Puppeteer.LaunchAsync(options);
+                Headless = headlessMode,
+                Args = new[] { "--window-size=1280,960" }
+            };
+            IBrowser browser = await Puppeteer.LaunchAsync(options);
 
-                var page = await browser.NewPageAsync();
-                await page.GoToAsync("https://store.steampowered.com/login/");
+            var page = await browser.NewPageAsync();
+            await page.GoToAsync("https://store.steampowered.com/login/");
+
+            if (headlessMode)
+            {
                 await page.WaitForSelectorAsync(SelectorCredentialsInput);
                 await page.TypeAsync($"input{SelectorCredentialsInput}[type=\"text\"]", accountName);
                 await page.TypeAsync($"input{SelectorCredentialsInput}[type=\"password\"]", password);
@@ -53,8 +42,7 @@ namespace SteamMarketApp.Auth
                 {
                     // Wrong login or password
                     await browser.CloseAsync();
-                    MessageBox.Show("Invalid account name or password");
-                    return false;
+                    throw new Exception("Invalid account name or password");
                 }
                 else if (await page.QuerySelectorAsync(SelectorMobileAuth) != null)
                 {
@@ -94,19 +82,13 @@ namespace SteamMarketApp.Auth
                             break;
                     }
                 }
+            }
 
-                await page.WaitForSelectorAsync(SelectorAccountAuthorized);
-                var cookies = await page.GetCookiesAsync();
-                var cookie = cookies.FirstOrDefault(c => c.Name == "steamLoginSecure");
-                Account = new SteamAccount(cookie.Value);
-                await browser.CloseAsync();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"An error occurred: {ex.Message}");
-                return false;
-            }
+            await page.WaitForSelectorAsync(SelectorAccountAuthorized, new WaitForSelectorOptions { Timeout = headlessMode ? 30000 : 0 });
+            var cookies = await page.GetCookiesAsync();
+            var cookie = cookies.First(c => c.Name == "steamLoginSecure");
+            await browser.CloseAsync();
+            return new SteamAccount(cookie.Value);
         }
     }
 }

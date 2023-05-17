@@ -34,6 +34,7 @@
             txtAccountName = new System.Windows.Forms.TextBox();
             txtPassword = new System.Windows.Forms.TextBox();
             chkRememberMe = new System.Windows.Forms.CheckBox();
+            btnSubmitWithBrowser = new System.Windows.Forms.Button();
             SuspendLayout();
             // 
             // btnSubmit
@@ -115,12 +116,30 @@
             chkRememberMe.Text = "Remember me";
             chkRememberMe.UseVisualStyleBackColor = true;
             // 
+            // btnSubmitWithBrowser
+            // 
+            btnSubmitWithBrowser.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
+            btnSubmitWithBrowser.BackColor = System.Drawing.Color.FromArgb(45, 115, 255);
+            btnSubmitWithBrowser.DialogResult = System.Windows.Forms.DialogResult.OK;
+            btnSubmitWithBrowser.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnSubmitWithBrowser.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            btnSubmitWithBrowser.ForeColor = System.Drawing.Color.White;
+            btnSubmitWithBrowser.Location = new System.Drawing.Point(226, 301);
+            btnSubmitWithBrowser.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
+            btnSubmitWithBrowser.Name = "btnSubmitWithBrowser";
+            btnSubmitWithBrowser.Size = new System.Drawing.Size(260, 46);
+            btnSubmitWithBrowser.TabIndex = 11;
+            btnSubmitWithBrowser.Text = "Sign In via browser";
+            btnSubmitWithBrowser.UseVisualStyleBackColor = false;
+            btnSubmitWithBrowser.Click += SubmitWithBrowser;
+            // 
             // SteamLoginForm
             // 
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             BackColor = System.Drawing.Color.FromArgb(40, 45, 55);
             ClientSize = new System.Drawing.Size(584, 361);
+            Controls.Add(btnSubmitWithBrowser);
             Controls.Add(chkRememberMe);
             Controls.Add(txtPassword);
             Controls.Add(txtAccountName);
@@ -142,5 +161,6 @@
         private System.Windows.Forms.TextBox txtAccountName;
         private System.Windows.Forms.TextBox txtPassword;
         private System.Windows.Forms.CheckBox chkRememberMe;
+        private System.Windows.Forms.Button btnSubmitWithBrowser;
     }
 }

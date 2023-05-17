@@ -21,30 +21,52 @@ namespace SteamMarketApp
 
         private async void Submit(object sender, EventArgs e)
         {
-            btnSubmit.Enabled = false;
-            var result = await SteamSession.CreateAsync(txtAccountName.Text, txtPassword.Text);
+            await SingInAsync(true);
+        }
 
-            if (result.IsSuccess)
+        private async void SubmitWithBrowser(object sender, EventArgs e)
+        {
+            await SingInAsync(false);
+        }
+
+        private async Task SingInAsync(bool headlessMode)
+        {
+            btnSubmit.Enabled = false;
+            btnSubmitWithBrowser.Enabled = false;
+
+            try
             {
-                if (chkRememberMe.Checked)
-                {
-                    Settings.Default.AccountName = txtAccountName.Text;
-                    Settings.Default.Password = txtPassword.Text;
-                    Settings.Default.SteamLoginSecure = result.Session.Account.SteamLoginSecure;
-                    Settings.Default.IsRemembered = true;
-                    Settings.Default.Save();
-                }
-                else
-                {
-                    Settings.Default.SteamLoginSecure = null;
-                    Settings.Default.IsRemembered = false;
-                    Settings.Default.Save();
-                }
+                SteamAccount account = await SteamSession.AuthorizeAsync(txtAccountName.Text, txtPassword.Text, headlessMode);
+                SaveAccountSettings(account);
+
                 this.Hide();
-                SteamMarketForm steamMarketForm = new SteamMarketForm(this, result.Session.Account);
+                SteamMarketForm steamMarketForm = new SteamMarketForm(this, account);
                 steamMarketForm.Show();
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An error occurred: {ex.Message}");
+            }
+
             btnSubmit.Enabled = true;
+            btnSubmitWithBrowser.Enabled = true;
+        }
+
+        private void SaveAccountSettings(SteamAccount account)
+        {
+            if (chkRememberMe.Checked)
+            {
+                Settings.Default.AccountName = txtAccountName.Text;
+                Settings.Default.Password = txtPassword.Text;
+                Settings.Default.SteamLoginSecure = account.SteamLoginSecure;
+                Settings.Default.IsRemembered = true;
+            }
+            else
+            {
+                Settings.Default.SteamLoginSecure = null;
+                Settings.Default.IsRemembered = false;
+            }
+            Settings.Default.Save();
         }
     }
 }
