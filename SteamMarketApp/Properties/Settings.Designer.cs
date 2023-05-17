@@ -59,29 +59,6 @@ namespace SteamMarketApp.Properties {
             }
         }
         
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public global::System.DateTime LastApiMarketCallTimestamp {
-            get {
-                return ((global::System.DateTime)(this["LastApiMarketCallTimestamp"]));
-            }
-            set {
-                this["LastApiMarketCallTimestamp"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("00:00:00")]
-        public global::System.TimeSpan ApiMarketCallPeriod {
-            get {
-                return ((global::System.TimeSpan)(this["ApiMarketCallPeriod"]));
-            }
-            set {
-                this["ApiMarketCallPeriod"] = value;
-            }
-        }
-        
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("mongodb://localhost:27017")]
@@ -109,29 +86,6 @@ namespace SteamMarketApp.Properties {
             }
             set {
                 this["SteamLoginSecure"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        public global::System.DateTime LastApiInventoryCallTimestamp {
-            get {
-                return ((global::System.DateTime)(this["LastApiInventoryCallTimestamp"]));
-            }
-            set {
-                this["LastApiInventoryCallTimestamp"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("00:00:00")]
-        public global::System.TimeSpan ApiInventoryCallPeriod {
-            get {
-                return ((global::System.TimeSpan)(this["ApiInventoryCallPeriod"]));
-            }
-            set {
-                this["ApiInventoryCallPeriod"] = value;
             }
         }
     }
