@@ -57,4 +57,4 @@ namespace SteamMarketApp
             return accountInfo != null;
         }
     }
-} 
+}
