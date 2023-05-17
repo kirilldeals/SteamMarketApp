@@ -8,12 +8,12 @@ The application is designed to retrieve data from [Steam Community Market](https
 * MongoDB Server 6.0
 
 ### Usage
-1) Login to Steam Account:\
-![login](https://user-images.githubusercontent.com/124831993/231579839-6303d03f-c030-42e8-8084-b282a5204a28.PNG)
+1) Login to Steam Account (run browser in the background or explicitly):\
+![login_v2](https://github.com/kirilldeals/SteamMarketApp/assets/124831993/1d4a16eb-62ef-42cb-ba11-4092e3029e6f)
 2) Pass 2-factor authentication (if required):\
-![login2factor](https://user-images.githubusercontent.com/124831993/231579916-3bd7822f-58cc-44b6-832f-65394b841fd2.PNG)
+![login2factor_v2](https://github.com/kirilldeals/SteamMarketApp/assets/124831993/54bd37dd-a335-4aa2-9a35-fd437164c329)
 3) Now you can retrieve history prices from steam market or your inventory:\
-![main](https://user-images.githubusercontent.com/124831993/231580104-081d5a64-192f-4207-8744-f11f8c91a390.PNG)
+![main_v2](https://github.com/kirilldeals/SteamMarketApp/assets/124831993/26d7413f-e1df-4f7c-ae22-e3c6d5a9407c)
 
 #### Buttons
 * **Log Out**: Log out from current steam session
