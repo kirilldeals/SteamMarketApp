@@ -47,8 +47,8 @@ namespace SteamMarketApp
             }
 
             var result = Task.Run(async () => await SteamWebRequest.GetAsync(Settings.Default.SteamLoginSecure)).Result;
-            if (result != "")
-                return true;
+            if (string.IsNullOrEmpty(result))
+                return false;
             HtmlAgilityPack.HtmlDocument htmlDoc = new HtmlAgilityPack.HtmlDocument();
             htmlDoc.LoadHtml(result);
             HtmlNode divNode = htmlDoc.GetElementbyId("global_action_menu");
@@ -57,4 +57,4 @@ namespace SteamMarketApp
             return accountInfo != null;
         }
     }
-}
+} 

@@ -30,12 +30,12 @@ namespace SteamMarketApp.Services
             return _collection.CountDocuments(filter);
         }
 
-        public async Task Create(TSteamItem item)
+        public async Task CreateAsync(TSteamItem item)
         {
             await _collection.InsertOneAsync(item);
         }
 
-        public async Task ClearAll()
+        public async Task ClearAllAsync()
         {
             var filter = Builders<TSteamItem>.Filter.Empty;
             await _collection.DeleteManyAsync(filter);
@@ -44,9 +44,23 @@ namespace SteamMarketApp.Services
         public List<TSteamItem> FindByGrowth(int count, bool desc = true)
         {
             var filter = Builders<TSteamItem>.Filter.Empty;
-            var sort = desc ? Builders<TSteamItem>.Sort.Descending("growth_rate") : Builders<TSteamItem>.Sort.Ascending("growth_rate");
+            var sort = desc ? 
+                Builders<TSteamItem>.Sort.Descending(item => item.GrowthRate) : 
+                Builders<TSteamItem>.Sort.Ascending(item => item.GrowthRate);
 
             return _collection.Find(filter).Sort(sort).Limit(count).ToList();
+        }
+
+        public List<TSteamItem> FindByPrice(int count, bool desc = true)
+        {
+            var filter = Builders<TSteamItem>.Filter.Empty;
+            var items = _collection.Find(filter).ToEnumerable();
+
+            var sortedItems = desc ?
+                items.OrderByDescending(item => item.Prices.Values.Last()) :
+                items.OrderBy(item => item.Prices.Values.Last());
+
+            return sortedItems.Take(count).ToList();
         }
 
         public List<(int,int)> FindPopularApps()

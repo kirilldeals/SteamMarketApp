@@ -9,12 +9,12 @@ namespace SteamMarketApp.Auth
     public class SteamAccount
     {
         public string SteamLoginSecure { get; private set; }
-        public string UserID { get; private set; }
+        public string SteamID { get; private set; }
 
         public SteamAccount(string steamLoginSecure)
         {
             SteamLoginSecure = steamLoginSecure;
-            UserID = SteamLoginSecure.Substring(0, SteamLoginSecure.IndexOf('%'));
+            SteamID = SteamLoginSecure.Substring(0, SteamLoginSecure.IndexOf('%'));
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using MongoDB.Bson;
-using MongoDB.Driver;
+﻿using MongoDB.Driver;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SteamMarketApp.Api;
@@ -9,10 +8,10 @@ using SteamMarketApp.Models;
 using SteamMarketApp.Services;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -32,7 +31,7 @@ namespace SteamMarketApp
         private readonly SteamItemsService<MarketItem> _marketItemsService;
         private readonly SteamItemsService<InventoryItem> _inventoryItemsService;
 
-        private CancellationTokenSource _cts;
+        private CancellationTokenSource? _cts;
 
         private long _marketCount;
         public long MarketCount
@@ -78,6 +77,16 @@ namespace SteamMarketApp
                 Application.Exit();
             };
 
+            Dictionary<string, string> filters = new()
+            {
+                { "Growth Rate", "FindByGrowth" },
+                { "Price", "FindByPrice" },
+            };
+            cboFilterBy.DataSource = new BindingSource(filters, null);
+            cboFilterBy.DisplayMember = "Key";
+            cboFilterBy.ValueMember = "Value";
+            cboFilterBy.SelectedIndex = 0;
+
             _apps = new Dictionary<int, char>() {
                 { 753, '6'},
                 { 730, '2'},
@@ -90,12 +99,10 @@ namespace SteamMarketApp
             _steamAccount = account;
             _mongoContext = new MongoContext();
             _marketItemsService = new SteamItemsService<MarketItem>(_mongoContext.Database, "market_items");
-            _inventoryItemsService = new SteamItemsService<InventoryItem>(_mongoContext.Database, "inventory_items_" + account.UserID);
+            _inventoryItemsService = new SteamItemsService<InventoryItem>(_mongoContext.Database, "inventory_items_" + account.SteamID);
 
             MarketCount = _marketItemsService.Count();
             InventoryCount = _inventoryItemsService.Count();
-
-            //var popularApps = _marketItemsService.FindPopularApps();
         }
 
         private void CreatePriceChartsFromMarket(object sender, EventArgs e)
@@ -119,8 +126,10 @@ namespace SteamMarketApp
             tlpPriceCharts.ColumnCount = 2;
             tlpPriceCharts.RowStyles.Clear();
 
-            var decreaseItems = itemsService.FindByGrowth(chartCount, false);
-            var increaseItems = itemsService.FindByGrowth(chartCount, true);
+            Type type = itemsService.GetType();
+            MethodInfo findDataMethod = type.GetMethod((string)cboFilterBy.SelectedValue);
+            var decreaseItems = (List<TSteamItem>)findDataMethod.Invoke(itemsService, new object[] { chartCount, false });
+            var increaseItems = (List<TSteamItem>)findDataMethod.Invoke(itemsService, new object[] { chartCount, true });
             #region Draw price history charts
             for (int i = 0; i < decreaseItems.Count; i++)
             {
@@ -198,24 +207,37 @@ namespace SteamMarketApp
 
             if (offset == 0)
             {
-                await _marketItemsService.ClearAll();
+                await _marketItemsService.ClearAllAsync();
                 MarketCount = 0;
             }
 
-            await Task.Run(async () =>
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    var result = await SteamWebRequest.GetAsync(_steamAccount.SteamLoginSecure, "/market/search/render", $"norender=1&start={offset}&count=100");
-                    if (await CheckForEmptyResponse(result, lblMarketTooManyRequests, token))
-                        continue;
-                    var steamItems = JsonConvert.DeserializeObject<MarketItems>(result).Collection;
-                    await SaveItems(_marketItemsService, steamItems, () => MarketCount++, lblMarketTooManyRequests, token);
-                    offset += 100;
-                }
-            },
-            token);
+            List<Task> tasks = new List<Task>();
+            var numberOfThreads = 4;
 
+            for (int threadIndex = 0; threadIndex < numberOfThreads; threadIndex++)
+            {
+                long innerOffset = offset + threadIndex * 100;
+
+                Task task = Task.Run(async () =>
+                {
+                    while (!token.IsCancellationRequested)
+                    {
+                        var result = await SteamWebRequest.GetAsync(_steamAccount.SteamLoginSecure, "/market/search/render", $"norender=1&start={innerOffset}&count=100");
+                        if (await CheckForEmptyResponse(result, lblMarketTooManyRequests, token))
+                            continue;
+                        var steamItems = JsonConvert.DeserializeObject<MarketItems>(result).Collection;
+                        await SaveItems(_marketItemsService, steamItems, () => MarketCount++, lblMarketTooManyRequests, token);
+                        innerOffset += numberOfThreads * 100;
+                    }
+                }, 
+                token);
+
+                tasks.Add(task);
+            }
+
+            await Task.WhenAll(tasks);
+
+            MarketCount = _marketItemsService.Count();
             btnMarketRefreshAll.Enabled = true;
             btnMarketGet.Enabled = true;
         }
@@ -227,7 +249,7 @@ namespace SteamMarketApp
             var cts = new CancellationTokenSource();
             var token = cts.Token;
 
-            await _inventoryItemsService.ClearAll();
+            await _inventoryItemsService.ClearAllAsync();
             InventoryCount = 0;
 
             foreach (var app in _apps)
@@ -235,7 +257,7 @@ namespace SteamMarketApp
                 var offset = "";
                 while (true)
                 {
-                    var result = await SteamWebRequest.GetAsync(_steamAccount.SteamLoginSecure, $"/inventory/{_steamAccount.UserID}/{app.Key}/{app.Value}", $"start_assetid={offset}&count=100");
+                    var result = await SteamWebRequest.GetAsync(_steamAccount.SteamLoginSecure, $"/inventory/{_steamAccount.SteamID}/{app.Key}/{app.Value}", $"start_assetid={offset}&count=100");
                     if (await CheckForEmptyResponse(result, lblInventoryTooManyRequests, token))
                         continue;
                     if (!result.StartsWith("{\"error\"") && !result.StartsWith("{\"total_inventory_count\""))
@@ -256,16 +278,21 @@ namespace SteamMarketApp
                 }
             }
 
+            InventoryCount = _inventoryItemsService.Count();
             btnInventoryRefreshAll.Enabled = true;
         }
 
-        private async Task SaveItems<TSteamItem>(SteamItemsService<TSteamItem> itemsService, IEnumerable<TSteamItem> steamItems, Action countIncrement, Label label, CancellationToken token) where TSteamItem : ISteamItem, new()
+        private async Task SaveItems<TSteamItem>(SteamItemsService<TSteamItem> itemsService, IEnumerable<TSteamItem> steamItems, Action countIncrement, Label label, CancellationToken token) 
+            where TSteamItem : ISteamItem, new()
         {
             var tasks = steamItems.Select(async item =>
             {
                 await GetPriceHistory(item, label, token);
-                await itemsService.Create(item);
-                countIncrement();
+                if (item.Prices.Any())
+                {
+                    await itemsService.CreateAsync(item);
+                    countIncrement();
+                }
             });
             await Task.WhenAll(tasks);
         }
@@ -286,7 +313,10 @@ namespace SteamMarketApp
                     .OrderBy(x => x.Key)
                     .SkipWhile(x => x.Key < dateBoundary)
                     .ToDictionary(x => x.Key, x => x.Value);
-                item.GrowthRate = GrowthRateCalculator.Calculate(item.Prices.Values);
+                if (item.Prices.Any())
+                {
+                    item.GrowthRate = GrowthRateCalculator.Calculate(item.Prices.Values);
+                }
                 break;
             }
         }
