@@ -24,7 +24,6 @@ namespace SteamMarketApp
     {
         private const string DateFormat = "MMM dd yyyy HH: z";
 
-        private readonly Dictionary<int, char> _apps;
         private readonly SteamLoginForm _loginForm;
         private readonly SteamAccount _steamAccount;
         private readonly MongoContext _mongoContext;
@@ -87,14 +86,6 @@ namespace SteamMarketApp
             cboFilterBy.ValueMember = "Value";
             cboFilterBy.SelectedIndex = 0;
 
-            _apps = new Dictionary<int, char>() {
-                { 753, '6'},
-                { 730, '2'},
-                { 570, '2'},
-                { 578080, '2'},
-                { 252490, '1'},
-                { 440, '2'},
-            };
             _loginForm = loginForm;
             _steamAccount = account;
             _mongoContext = new MongoContext();
@@ -127,9 +118,9 @@ namespace SteamMarketApp
             tlpPriceCharts.RowStyles.Clear();
 
             Type type = itemsService.GetType();
-            MethodInfo findDataMethod = type.GetMethod((string)cboFilterBy.SelectedValue);
-            var decreaseItems = (List<TSteamItem>)findDataMethod.Invoke(itemsService, new object[] { chartCount, false });
-            var increaseItems = (List<TSteamItem>)findDataMethod.Invoke(itemsService, new object[] { chartCount, true });
+            MethodInfo findDataMethod = type.GetMethod((string)cboFilterBy.SelectedValue!)!;
+            var decreaseItems = (List<TSteamItem>)findDataMethod.Invoke(itemsService, new object[] { chartCount, false })!;
+            var increaseItems = (List<TSteamItem>)findDataMethod.Invoke(itemsService, new object[] { chartCount, true })!;
             #region Draw price history charts
             for (int i = 0; i < decreaseItems.Count; i++)
             {
@@ -137,15 +128,19 @@ namespace SteamMarketApp
                 int col = 0;
                 foreach (var items in new[] { decreaseItems, increaseItems })
                 {
-                    TableLayoutPanel nestedTableLayoutPanel = new TableLayoutPanel();
-                    nestedTableLayoutPanel.ColumnCount = 1;
-                    nestedTableLayoutPanel.RowCount = 2;
-                    nestedTableLayoutPanel.Dock = DockStyle.Fill;
+                    var nestedTableLayoutPanel = new TableLayoutPanel
+                    {
+                        ColumnCount = 1,
+                        RowCount = 2,
+                        Dock = DockStyle.Fill
+                    };
                     nestedTableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
                     nestedTableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-                    LinkLabel itemLink = new LinkLabel();
-                    itemLink.Text = items[i].Name;
+                    var itemLink = new LinkLabel
+                    {
+                        Text = items[i].Name
+                    };
                     var url = $"https://steamcommunity.com/market/listings/{items[i].Appid}/{items[i].Name}";
                     itemLink.LinkClicked += (sender, e) => System.Diagnostics.Process.Start("explorer.exe", url);
                     itemLink.AutoSize = true;
@@ -154,21 +149,27 @@ namespace SteamMarketApp
                     itemLink.Location = new Point(0, 0);
                     nestedTableLayoutPanel.Controls.Add(itemLink, 0, 0);
 
-                    Chart chart = new Chart();
-                    chart.Dock = DockStyle.Bottom;
-                    chart.BackColor = Color.FromArgb(40, 45, 55);
+                    var chart = new Chart
+                    {
+                        Dock = DockStyle.Bottom,
+                        BackColor = Color.FromArgb(40, 45, 55)
+                    };
 
-                    ChartArea chartArea = new ChartArea();
-                    chartArea.BackColor = Color.FromArgb(20, 25, 35);
+                    var chartArea = new ChartArea
+                    {
+                        BackColor = Color.FromArgb(20, 25, 35)
+                    };
                     chartArea.AxisX.LabelStyle.ForeColor = Color.FromArgb(220, 230, 240);
                     chartArea.AxisY.LabelStyle.ForeColor = Color.FromArgb(220, 230, 240);
                     chartArea.AxisY.Minimum = (int)items[i].Prices.Values.Min();
                     chart.ChartAreas.Add(chartArea);
 
-                    Series series = new Series("Prices");
-                    series.ChartType = SeriesChartType.Line;
-                    series.BorderWidth = 2;
-                    series.Color = Color.FromArgb(100, 140, 60);
+                    var series = new Series("Prices")
+                    {
+                        ChartType = SeriesChartType.Line,
+                        BorderWidth = 2,
+                        Color = Color.FromArgb(100, 140, 60)
+                    };
                     chart.Series.Add(series);
 
                     chart.DataSource = items[i].Prices.Values;
@@ -211,7 +212,7 @@ namespace SteamMarketApp
                 MarketCount = 0;
             }
 
-            List<Task> tasks = new List<Task>();
+            var tasks = new List<Task>();
             var numberOfThreads = 4;
 
             for (int threadIndex = 0; threadIndex < numberOfThreads; threadIndex++)
@@ -225,11 +226,14 @@ namespace SteamMarketApp
                         var result = await SteamWebRequest.GetAsync(_steamAccount.SteamLoginSecure, "/market/search/render", $"norender=1&start={innerOffset}&count=100");
                         if (await CheckForEmptyResponse(result, lblMarketTooManyRequests, token))
                             continue;
-                        var steamItems = JsonConvert.DeserializeObject<MarketItems>(result).Collection;
-                        await SaveItems(_marketItemsService, steamItems, () => MarketCount++, lblMarketTooManyRequests, token);
+                        var steamItems = JsonConvert.DeserializeObject<MarketItems>(result)?.Collection;
+                        if (steamItems != null)
+                        {
+                            await SaveItems(_marketItemsService, steamItems, () => MarketCount++, lblMarketTooManyRequests, token);
+                        }
                         innerOffset += numberOfThreads * 100;
                     }
-                }, 
+                },
                 token);
 
                 tasks.Add(task);
@@ -252,7 +256,7 @@ namespace SteamMarketApp
             await _inventoryItemsService.ClearAllAsync();
             InventoryCount = 0;
 
-            foreach (var app in _apps)
+            foreach (var app in SteamAppIdMapping.Apps)
             {
                 var offset = "";
                 while (true)
@@ -262,16 +266,19 @@ namespace SteamMarketApp
                         continue;
                     if (!result.StartsWith("{\"error\"") && !result.StartsWith("{\"total_inventory_count\""))
                     {
-                        var allItems = JsonConvert.DeserializeObject<InventoryItems>(result).Collection;
-                        var steamItems = allItems.Where(x => x.Marketable == true);
-                        await SaveItems(_inventoryItemsService, steamItems, () => InventoryCount++, lblInventoryTooManyRequests, token);
-                        if (allItems.Count() < 100)
-                            break;
+                        var allItems = JsonConvert.DeserializeObject<InventoryItems>(result)?.Collection;
+                        if (allItems != null)
+                        {
+                            var steamItems = allItems.Where(x => x.Marketable == true);
+                            await SaveItems(_inventoryItemsService, steamItems, () => InventoryCount++, lblInventoryTooManyRequests, token);
+                            if (allItems.Count() < 100)
+                                break;
+                        }
 
                         JObject json = JObject.Parse(result);
-                        JArray assets = (JArray)json["assets"];
-                        JToken lastAsset = assets.LastOrDefault();
-                        offset = lastAsset["assetid"].ToString();
+                        JArray assets = (JArray)json["assets"]!;
+                        JToken lastAsset = assets.Last();
+                        offset = lastAsset["assetid"]!.ToString();
                     }
                     else
                         break;
@@ -282,7 +289,7 @@ namespace SteamMarketApp
             btnInventoryRefreshAll.Enabled = true;
         }
 
-        private async Task SaveItems<TSteamItem>(SteamItemsService<TSteamItem> itemsService, IEnumerable<TSteamItem> steamItems, Action countIncrement, Label label, CancellationToken token) 
+        private async Task SaveItems<TSteamItem>(SteamItemsService<TSteamItem> itemsService, IEnumerable<TSteamItem> steamItems, Action countIncrement, Label label, CancellationToken token)
             where TSteamItem : ISteamItem, new()
         {
             var tasks = steamItems.Select(async item =>
@@ -304,12 +311,12 @@ namespace SteamMarketApp
                 var result = await SteamWebRequest.GetAsync(_steamAccount.SteamLoginSecure, "/market/pricehistory", $"appid={item.Appid}&market_hash_name={HttpUtility.UrlEncode(item.Name)}");
                 if (await CheckForEmptyResponse(result, label, token))
                     continue;
-                JObject json = JsonConvert.DeserializeObject<JObject>(result);
-                JArray resultsArray = (JArray)json["prices"];
+                JObject json = JsonConvert.DeserializeObject<JObject>(result)!;
+                JArray resultsArray = (JArray)json["prices"]!;
 
                 var dateBoundary = DateTime.Now.AddDays(-30);
                 item.Prices = resultsArray
-                    .Select(x => new KeyValuePair<DateTime, double>(DateTime.ParseExact((string)x[0], DateFormat, CultureInfo.InvariantCulture), (double)x[1]))
+                    .Select(x => new KeyValuePair<DateTime, double>(DateTime.ParseExact((string)x[0]!, DateFormat, CultureInfo.InvariantCulture), (double)x[1]!))
                     .OrderBy(x => x.Key)
                     .SkipWhile(x => x.Key < dateBoundary)
                     .ToDictionary(x => x.Key, x => x.Value);

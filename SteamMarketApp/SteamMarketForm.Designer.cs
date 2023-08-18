@@ -81,7 +81,6 @@
             // 
             // btnMarket
             // 
-            btnMarket.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
             btnMarket.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             btnMarket.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             btnMarket.ForeColor = System.Drawing.Color.FromArgb(220, 230, 240);
@@ -96,7 +95,6 @@
             // 
             // btnInventory
             // 
-            btnInventory.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
             btnInventory.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             btnInventory.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             btnInventory.ForeColor = System.Drawing.Color.FromArgb(220, 230, 240);
