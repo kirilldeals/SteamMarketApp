@@ -17,12 +17,12 @@ namespace SteamMarketApp
         ///  The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        static async Task Main()
         {
             ApplicationConfiguration.Initialize();
 
-            bool isLoggedIn = IsSteamUserLoggedIn();
-            SteamLoginForm loginForm = new SteamLoginForm();
+            bool isLoggedIn = await IsSteamUserLoggedIn();
+            var loginForm = new SteamLoginForm();
             loginForm.FormClosed += (sender, e) => {
                 Application.Exit();
             };
@@ -39,17 +39,17 @@ namespace SteamMarketApp
             Application.Run();
         }
 
-        private static bool IsSteamUserLoggedIn()
+        private static async Task<bool> IsSteamUserLoggedIn()
         {
             if (!Settings.Default.IsRemembered)
             {
                 return false;
             }
 
-            var result = Task.Run(async () => await SteamWebRequest.GetAsync(Settings.Default.SteamLoginSecure)).Result;
+            var result = await SteamWebRequest.GetAsync(Settings.Default.SteamLoginSecure);
             if (string.IsNullOrEmpty(result))
                 return false;
-            HtmlAgilityPack.HtmlDocument htmlDoc = new HtmlAgilityPack.HtmlDocument();
+            var htmlDoc = new HtmlAgilityPack.HtmlDocument();
             htmlDoc.LoadHtml(result);
             HtmlNode divNode = htmlDoc.GetElementbyId("global_action_menu");
             HtmlNode? accountInfo = divNode.Descendants().FirstOrDefault(n => n.Attributes["id"]?.Value == "account_pulldown");
@@ -57,4 +57,4 @@ namespace SteamMarketApp
             return accountInfo != null;
         }
     }
-} 
+}

@@ -15,11 +15,11 @@ namespace SteamMarketApp.Models
     {
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
-        public string ItemId { get; set; }
+        public string ItemId { get; set; } = null!;
 
         [BsonElement("name")]
         [JsonProperty("market_hash_name")]
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
 
         [BsonElement("appid")]
         [JsonProperty("appid")]
@@ -27,7 +27,7 @@ namespace SteamMarketApp.Models
 
         [BsonElement("prices")]
         [BsonDictionaryOptions(DictionaryRepresentation.ArrayOfDocuments)]
-        public Dictionary<DateTime, double> Prices { get; set; }
+        public Dictionary<DateTime, double> Prices { get; set; } = new Dictionary<DateTime, double>();
 
         [BsonElement("growth_rate")]
         public double GrowthRate { get; set; }
@@ -39,6 +39,6 @@ namespace SteamMarketApp.Models
     public class InventoryItems : ISteamItems<InventoryItem>
     {
         [JsonProperty("descriptions")]
-        public IEnumerable<InventoryItem> Collection { get; set; }
+        public IEnumerable<InventoryItem> Collection { get; set; } = null!;
     }
 }

@@ -12,7 +12,6 @@ namespace SteamMarketApp.Auth
         const string SelectorSubmitCredentials = ".newlogindialog_SubmitButton_2QgFE";
         const string SelectorError = ".newlogindialog_Danger_1-HwJ";
         const string SelectorMobileAuth = ".newlogindialog_AwaitingMobileConfText_7LmnT";
-        const string SelectorMobileAuthFailure = ".newlogindialog_FailureTitle_A3Y-u";
         const string SelectorCodeInputLink = ".newlogindialog_TextLink_1cnUQ";
         const string SelectorCodeInput = ".segmentedinputs_SegmentedCharacterInput_3PDBF";
         const string SelectorAccountAuthorized = "#account_pulldown";
@@ -32,56 +31,7 @@ namespace SteamMarketApp.Auth
 
             if (headlessMode)
             {
-                await page.WaitForSelectorAsync(SelectorCredentialsInput);
-                await page.TypeAsync($"input{SelectorCredentialsInput}[type=\"text\"]", accountName);
-                await page.TypeAsync($"input{SelectorCredentialsInput}[type=\"password\"]", password);
-                await page.ClickAsync(SelectorSubmitCredentials);
-
-                await page.WaitForSelectorAsync($"{SelectorError}, {SelectorMobileAuth}, {SelectorCodeInput}");
-                if (await page.QuerySelectorAsync(SelectorError) != null)
-                {
-                    // Wrong login or password
-                    await browser.CloseAsync();
-                    throw new Exception("Invalid account name or password");
-                }
-                else if (await page.QuerySelectorAsync(SelectorMobileAuth) != null)
-                {
-                    await page.ClickAsync(SelectorCodeInputLink);
-                }
-                if (await page.QuerySelectorAsync(SelectorCodeInput) != null)
-                {
-                    // Two-Factor Authentication is required
-                    await page.WaitForSelectorAsync(SelectorCodeInput);
-                    var twoFactorCodeField = await page.QuerySelectorAsync(SelectorCodeInput);
-                    var inputs = twoFactorCodeField.QuerySelectorAllAsync("input").Result.ToArray();
-
-                    while (true)
-                    {
-                        AuthCodeForm authCodeForm = new AuthCodeForm();
-                        var result = authCodeForm.ShowDialog();
-                        if (result == DialogResult.OK)
-                        {
-                            string authCode = authCodeForm.Code;
-                            for (int i = 0; i < inputs.Length; i++)
-                            {
-                                await inputs[i].TypeAsync(authCode[i].ToString());
-                            }
-                        }
-
-                        await page.WaitForSelectorAsync($"{SelectorError}, {SelectorAccountAuthorized}");
-                        if (await page.QuerySelectorAsync(SelectorError) != null)
-                        {
-                            MessageBox.Show("Incorrect code, please try again");
-                            foreach (var input in inputs)
-                            {
-                                await input.ClickAsync();
-                                await page.Keyboard.PressAsync("Backspace");
-                            }
-                        }
-                        else
-                            break;
-                    }
-                }
+                await AuthorizeHeadlessAsync(accountName, password, browser, page);
             }
 
             await page.WaitForSelectorAsync(SelectorAccountAuthorized, new WaitForSelectorOptions { Timeout = headlessMode ? 30000 : 0 });
@@ -89,6 +39,60 @@ namespace SteamMarketApp.Auth
             var cookie = cookies.First(c => c.Name == "steamLoginSecure");
             await browser.CloseAsync();
             return new SteamAccount(cookie.Value);
+        }
+
+        private static async Task AuthorizeHeadlessAsync(string accountName, string password, IBrowser browser, IPage page)
+        {
+            await page.WaitForSelectorAsync(SelectorCredentialsInput);
+            await page.TypeAsync($"input{SelectorCredentialsInput}[type=\"text\"]", accountName);
+            await page.TypeAsync($"input{SelectorCredentialsInput}[type=\"password\"]", password);
+            await page.ClickAsync(SelectorSubmitCredentials);
+
+            await page.WaitForSelectorAsync($"{SelectorError}, {SelectorMobileAuth}, {SelectorCodeInput}");
+            if (await page.QuerySelectorAsync(SelectorError) != null)
+            {
+                // Wrong login or password
+                await browser.CloseAsync();
+                throw new Exception("Invalid account name or password");
+            }
+            else if (await page.QuerySelectorAsync(SelectorMobileAuth) != null)
+            {
+                await page.ClickAsync(SelectorCodeInputLink);
+            }
+            if (await page.QuerySelectorAsync(SelectorCodeInput) != null)
+            {
+                // Two-Factor Authentication is required
+                await page.WaitForSelectorAsync(SelectorCodeInput);
+                var twoFactorCodeField = await page.QuerySelectorAsync(SelectorCodeInput);
+                var inputs = twoFactorCodeField.QuerySelectorAllAsync("input").Result.ToArray();
+
+                while (true)
+                {
+                    var authCodeForm = new AuthCodeForm();
+                    var result = authCodeForm.ShowDialog();
+                    if (result == DialogResult.OK)
+                    {
+                        string authCode = authCodeForm.Code;
+                        for (int i = 0; i < inputs.Length; i++)
+                        {
+                            await inputs[i].TypeAsync(authCode[i].ToString());
+                        }
+                    }
+
+                    await page.WaitForSelectorAsync($"{SelectorError}, {SelectorAccountAuthorized}");
+                    if (await page.QuerySelectorAsync(SelectorError) != null)
+                    {
+                        MessageBox.Show("Incorrect code, please try again");
+                        foreach (var input in inputs)
+                        {
+                            await input.ClickAsync();
+                            await page.Keyboard.PressAsync("Backspace");
+                        }
+                    }
+                    else
+                        break;
+                }
+            }
         }
     }
 }

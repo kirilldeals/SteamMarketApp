@@ -40,7 +40,7 @@ namespace SteamMarketApp
                 SaveAccountSettings(account);
 
                 this.Hide();
-                SteamMarketForm steamMarketForm = new SteamMarketForm(this, account);
+                var steamMarketForm = new SteamMarketForm(this, account);
                 steamMarketForm.Show();
             }
             catch (Exception ex)
